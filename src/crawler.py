@@ -59,6 +59,7 @@ def crawl(frange):
     path = os.path.join(data_path,'OUT_titles_in_all_lang.dill') 
     f = dill.load(open(path,'rb'))
     pages = sorted(f.keys())
+#    print pages.index('History_of_Georgia_(country)')
     for i in frange:
         
         page_name = pages[i]
@@ -84,15 +85,20 @@ if __name__ == '__main__':
     #get_crawle_info()
     ind = int(sys.argv[1])
     indices = arange(0,193) 
-    range_splites = array_split(indices,50)
+    range_splites = array_split(indices,51)
     current_range = range_splites[ind]
     iterator= crawl(current_range)
-    print type(iterator)
+#    print current_range
+    pages_with_err = []
     for i in crawl(range_splites[ind]):
         lang,page_name,dir_path = i
         wikipedia.set_lang(lang)
-        wiki_obj = wikipedia.page(page_name)
-        
+        try:
+            wiki_obj = wikipedia.page(page_name)
+        except Exception as err:
+            pages_with_err.append('{0}_{1}'.format(lang,page_name))
+            continue 
+
         html = wiki_obj.html()
 
         soup = BeautifulSoup(html,'lxml')
@@ -106,11 +112,15 @@ if __name__ == '__main__':
         save_file(txt.encode('utf-8'),path)
 
         #meta data
-        cat = wiki_obj.categories
-        cat = '\n'.join(cat)
-        path = os.path.join(dir_path, 'categories.txt')
-        save_file(cat.encode('utf-8'),path)
-        
+        try:
+            cat = wiki_obj.categories
+            cat = '\n'.join(cat)
+            path = os.path.join(dir_path, 'categories.txt')
+            save_file(cat.encode('utf-8'),path)
+        except Exception as err:
+            path = os.path.join(dir_path, 'categories.txt')
+            save_file(str(err),path)
+            pass
         try:
             links = wiki_obj.references
             links = '\n'.join(links)
@@ -125,6 +135,8 @@ if __name__ == '__main__':
         out  = 'rev:{0}\nparent_id:{1}'.format(rev_id,parent_id)
         path = os.path.join(dir_path, 'rev_ids.txt')
         save_file(out,path)
+    path = os.path.join(data_path,'err_{0}'.format(ind))
+    dill.dump(pages_with_err,open(path,'wb'))
 #        sys.exit()
 
 #        r = extract_years(paragraphs)
